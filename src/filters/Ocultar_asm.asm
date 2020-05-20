@@ -20,18 +20,19 @@ Ocultar_asm:
 push rbp
 mov rbp,rsp
 push rbx
-mov ebx , [rbp+24]
+;mov ebx , [rbp+24] ------------> MAL INDICADO
 push r12
 push r13
 push r14
 push r15
+push r10
 ;-------
 xor rbx,rbx
-
 xor r12,r12 ; CONTADOR FILA
 xor r13,r13 ; CONTADOR COLUMNA
 xor r14,r14 ; Le doy un uso super especifico al final, equivale a CANTIDAD DE COLUMNAS -1 
 xor r15,r15; (Lo uso en un momento para un offset)
+xor r10,r10
 ;----
 ;Pongo en registros las etiquetas
 movdqu xmm3, [MascaraRed]
@@ -39,8 +40,11 @@ movdqu xmm4, [MascaraGreen]
 movdqu xmm5, [MascaraBlue]
 movdqu xmm9, [MascaraSacarUltimoBit]
 mov r14d, ecx
-sub r14d,5 
+sub r14d,17
 
+mov r10,r9
+imul r10d, ecx  ;----> Final de la foto a copiar, va disminuyendo a medida que voy agregando fotos
+sub r10d,16
 
 ciclo:
 ;Aca empezaria el ciclo
@@ -180,21 +184,6 @@ movdqu xmm8,xmm7 ; Hago copia del color
 ; XMM15 TIENE SRC
 
 pand xmm15, [MascaraSacarUltimos2BitsPorByte] ; (src[i][j].b & 0xFC) pero para todos
-
- ;-------------------------------------------------------------------------------------- 
- ;                       NO ESTAN GIRANDO LOS BYTES PARA QUE ESTE EN MODO ESPEJO		;
- ;																						;
- ;																						;	
- ;																						;
- ;																						;
- ;																						;
- ;--------------------------------------------------------------------------------------
-
- 											;
- 											;
- 											;
- 											;
- 											;
  											;
     control:
 											  
@@ -215,9 +204,27 @@ pand xmm15, [MascaraSacarUltimos2BitsPorByte] ; (src[i][j].b & 0xFC) pero para t
 	; Obtenemos el dato
  	movdqu xmm2 , [REG_SRC + rax] ;XMM2 tiene el valor de SRC 
  	movdqu xmm1, xmm2 ; Hago una copia de XMM16 (SRC) en XMM1
+ 	pxor xmm3,xmm3
 
+ 	;InvertirRegistro
+ 	movss xmm3,xmm2
+ 	pslldq xmm3,4
+
+ 	psrldq xmm2,4
+ 	movss xmm3,xmm2
+ 	pslldq xmm3,4
+ 					; EN ESTE CODIGO SE INVIERTE |X1,X2,X3,X4| -> |X4,X3,X2,X1|
+ 	psrldq xmm2,4
+ 	movss xmm3,xmm2
+ 	pslldq xmm3,4
+
+ 	psrldq xmm2,4
+ 	movss xmm3,xmm2
+ 	;
  
-	psrld xmm2,2 ; Quiero los bits 2 y 3 
+ 	movdqu xmm2,xmm3 
+
+ 	psrld xmm2,2 ; Quiero los bits 2 y 1 
  	pand xmm2 , [MascaraConservarUltimos2BitsPorByte] ; XMM2 Ya limpiado excepto los bits 2 y 3 que ahora estan en 0 y 1 
 
 
@@ -251,10 +258,11 @@ pand xmm1, [MascaraSacarUltimos2BitsPorByte] ;           	    PIXEL 1 							PIX
 
 paddb xmm1,xmm10 ;AL FIN TENGO EL DATO !!!!!!!!!!!!!!!!!!!!!!!!!1
 
+	
 ; Offset de la fila
 	mov eax,r9d   ; TAMANO FILA y dato
 	imul eax, r12d ; CONTADOR FILA 
-	;imul eax, 4 ; TAMANO POR DATO  
+  
  
  ; Offset del dato
  	mov r15d,r13d ; contador columna 
@@ -262,13 +270,13 @@ paddb xmm1,xmm10 ;AL FIN TENGO EL DATO !!!!!!!!!!!!!!!!!!!!!!!!!1
  	add eax,r15d
 
 	;copiamos el dato
-	movdqu [REG_ACOPIAR + rax],xmm1
+	movdqu [REG_ACOPIAR+r10],xmm1
 
 ;Ahora hay que ver si tenemos que seguir ciclando o solo aumentar las variables con las que nos movemos
 
 ;Aumentar i / j 
  
-	cmp r13d, r14d ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 1 
+	cmp r13d, r14d ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 17 ()
 	jl incCol  ; 
 	incrementarFila:
 	inc r12d
@@ -278,7 +286,8 @@ paddb xmm1,xmm10 ;AL FIN TENGO EL DATO !!!!!!!!!!!!!!!!!!!!!!!!!1
 	jmp ciclo
 
 	incCol:
-	add r13d,4
+	sub r10,16
+	add r13d,16
 	jmp ciclo
 
 
@@ -287,6 +296,7 @@ paddb xmm1,xmm10 ;AL FIN TENGO EL DATO !!!!!!!!!!!!!!!!!!!!!!!!!1
 
 
 ;-------
+pop r10
 pop r15                                          
 pop r14
 pop r13
