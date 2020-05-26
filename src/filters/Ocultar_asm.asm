@@ -2,12 +2,14 @@ MascaraConseguirRojo:       db 0x02,0xFF,0xFF,0xFF,0x06,0xFF,0xFF,0xFF,0x0A,0xFF
 MascaraConseguirGreen:      db 0x01,0xFF,0xFF,0xFF,0x05,0xFF,0xFF,0xFF,0x09,0xFF,0xFF,0xFF,0x0D,0xFF,0xFF,0xFF
 MascaraConseguirBlue:       db 0x00,0xFF,0xFF,0xFF,0x04,0xFF,0xFF,0xFF,0x08,0xFF,0xFF,0xFF,0x0C,0xFF,0xFF,0xFF
 MascaraConservarPrimerbit:  db 0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00
-MascaraConservarPrimer2bit: db 0x02,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x02,0x00,0x00,0x00
+MascaraConservarPrimer2bit: db 0x03,0x03,0x03,0x00,0x03,0x03,0x03,0x00,0x03,0x03,0x03,0x00,0x03,0x03,0x03,0x00
 MascaraSacarUltimos2Bits:   db 0xFC,0xFC,0xFC,0xFF,0xFC,0xFC,0xFC,0xFF,0xFC,0xFC,0xFC,0xFF,0xFC,0xFC,0xFC,0xFF
 MascaraPatrones:            db 0xFF,0x00,0x00,0xFF,0x00,0xFF,0x00,0xFF,0x00,0x00,0xFF,0xFF,0xFF,0x00,0x00,0xFF
 MascaraGrises:              db 0x00,0x00,0x00,0xFF,0x04,0x04,0x04,0xFF,0x08,0x08,0x08,0xFF,0x0C,0x0C,0x0C,0xFF
 PonerAlpha:                 db 0x00,0x00,0x00,0xFF,0x00,0x00,0x00,0xFF,0x00,0x00,0x00,0xFF,0x00,0x00,0x00,0xFF
 MascaraInvertir:            db 0x0C,0x0D,0x0E,0x0F,0x08,0x09,0x0A,0x0B,0x04,0x05,0x06,0x07,0x00,0x01,0x02,0x03
+MascaraFF:                  db 0xFF,0x00,0x00,0x00,0xFF,0x00,0x00,0x00,0xFF,0x00,0x00,0x00,0xFF,0x00,0x00,0x00              
+;MascaraInvertirOrden:       db 
 global Ocultar_asm
 Ocultar_asm:
 %define REG_SRC rdi
@@ -70,7 +72,7 @@ pxor xmm9,xmm9 ; AzulBits
 	imul eax, r12d ; CONTADOR FILA 
 	  
  ; Offset del dato
- 	mov r15d,r13d ; contador columna 
+ 	mov r15d,r13d ; contador columna    
  	shl r15d,2
  	add eax,r15d
 
@@ -99,68 +101,70 @@ movdqu xmm4,xmm10
 
 ;------- Me quedo en xmm4 el valor de el registro 
 psrld xmm6, 2														
-movdqu xmm10,xmm6 ; Me hago una copia de los colores ;          
-
-;pshufb xmm6,xmm13 ;-> En este linea la convertirias en blanco y negro 								
-BlueBits:																					
-psrld xmm10,4 
-pand xmm10, xmm0 ; -> consigo  bit 4 de cada dword
-por xmm9,xmm10   ; -> consigo asigno los valores para bit 1 
-pslld xmm9, 1    ; -> los corro al bit 1 de cada dword
-
-movdqu xmm10,xmm6
-
-psrld xmm10,7  
-pand xmm10, xmm0 ; -> consigo  bit 7 de cada dword
-por xmm9,xmm10 ; ; -> le asigno los valores para bit 0 
-
-movdqu xmm10,xmm6; Restauro copia 
-
-;Los 2 bits de cada dword ya estan alineados 
-
-GreenBits:
-psrld xmm10,3 
-pand xmm10, xmm0 ; -> consigo  bit 3 de cada dword
-pxor xmm8,xmm10   ; -> consigo asigno los valores para bit 1 
-pslld xmm8, 1    ; -> los corro al bit 1 de cada dword
-
-movdqu xmm10,xmm6 ; Restauro copia 
-
-psrld xmm10,6  
-pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
-por xmm8,xmm10 ; ; -> le asigno los valores para bit 0 
-
-movdqu xmm10,xmm6; Restauro la copia 
-
-;Tengo que alinearlos a la posicion 8 de cada dword
-pslld xmm8,8
+movdqu xmm10,xmm6 ; Me hago una copia de los colores ;         
+;pshufb xmm6,xmm13 ;-> En este linea la convertirias en blanco y negro poniendo el valor de color en cada componente 
 
 RedBits:
 psrld xmm10,2 
 pand xmm10, xmm0 ; -> consigo  bit 2 de cada dword
-por xmm7,xmm10   ; -> consigo asigno los valores para bit 1 
-pslld xmm7, 1    ; -> los corro al bit 1 de cada dword
+por xmm8,xmm10   ; -> consigo asigno los valores para bit 1 
+pslld xmm8, 1    ; -> los corro al bit 1 de cada dword
 
 movdqu xmm10,xmm6
 
+
 psrld xmm10,5
-pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
-por xmm7,xmm10 ; ; -> le asigno los valores para bit 0 
+pand xmm10, xmm0 ; -> consigo  bit 5 de cada dword
+por xmm8,xmm10 ; ; -> le asigno los valores para bit 0 
 
 movdqu xmm10,xmm6
 
 ;Tengo que alinearlos a la posicion 16 de cada dword
 pslld xmm8,16
 
-;------- 
-Imagen:
-paddb xmm8,xmm7
-paddb xmm8,xmm9
-;----------------------- Ya tengo los colores de blanco y negro
+	
 
+GreenBits:
+psrld xmm10,3 
+pand xmm10, xmm0 ; -> consigo  bit 3 de cada dword
+por xmm9,xmm10   ; -> consigo asigno los valores para bit 1 
+pslld xmm9, 1    ; -> los corro al bit 1 de cada dword
+
+movdqu xmm10,xmm6 ; Restauro copia 
+
+psrld xmm10,6  
+pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
+por xmm9,xmm10 ; ; -> le asigno los valores para bit 0 
+
+movdqu xmm10,xmm6; Restauro la copia 
+
+;Tengo que alinearlos a la posicion 8 de cada dword
+pslld xmm9,8
+
+BlueBits:
+psrld xmm10,4 
+pand xmm10, xmm0 ; -> consigo  bit 2 de cada dword
+por xmm7,xmm10   ; -> consigo asigno los valores para bit 1 
+pslld xmm7, 1    ; -> los corro al bit 1 de cada dword
+
+movdqu xmm10,xmm6
+
+psrld xmm10,7
+pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
+por xmm7,xmm10 ; ; -> le asigno los valores para bit 0 
+
+movdqu xmm10,xmm6
+
+;------- 
+Imagen:                                       
+por xmm8,xmm7 ; 							|    47|    36|    25|   0 |    47|    36|    25|   0 |   47|    36|    25|   0 |    47|    36|    25|   0 |
+por xmm8,xmm9
+
+;----------------------- Ya tengo los colores de blanco y negro              
+BitsColores:
 ;Pixeles Espejo
-movdqu xmm11 , [REG_SRC + r10] ;XMM2 tiene el valor de SRC ESPEJO 
-pshufb xmm11,xmm13 ; Los invierto
+movdqu xmm11 , [REG_SRC + r10] ;XMM2 tiene el valor de SRC ESPEJO                  
+pshufb xmm11, xmm13 ; Los invierto   00011011
 psrld xmm11,2          ; Los corro dos bits para sacar los 2 y 3 
 pand xmm11, [MascaraConservarPrimer2bit] ; Me quedo con los bits que quiero
 
@@ -168,9 +172,9 @@ pxor xmm8,xmm11
 
 
 ;En xmm14 tengo la foto Que esconde
-
+Filtro:
 pand xmm14, xmm15 ; Limpio los 2 ultimos bits y copio
-paddb xmm14,xmm8                              
+por xmm14,xmm8                              
 movdqu [REG_ACOPIAR+rax],xmm14
 xor rax,rax
 ;Ahora hay que ver si tenemos que seguir ciclando o solo aumentar las variables con las que nos movemos
@@ -180,6 +184,7 @@ xor rax,rax
 	cmp r13d, r14d ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 5  ()
 	jl incCol  ; 
 	incrementarFila:
+	sub r10,16
 	inc r12d
 	cmp r12d,r8d
 	je termine
