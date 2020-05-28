@@ -53,13 +53,13 @@ for imp in asm; do
 
   # Descubir
   for s in ${SIZESMEM[*]}; do
-    run_test "$TP2ALU" "Descubrir" "$imp" "$TESTINDIR/$img0.$s.bmp.Ocultar.asm.bmp" ""
+    run_test "$TP2ALU" "Descubrir" "$imp" "$ALUMNOSDIR/$img0.$s.bmp.Ocultar.ASM.bmp" ""
     if [ $ret -ne 0 ]; then exit -1; fi
   done
 
   # ZigZag
   for s in ${SIZESMEM[*]}; do
-    run_test "$TP2ALU" "ZigZag" "$imp" "$TESTINDIR/$img0.$s.bmp" ""
+    run_test "$TP2ALU" "Zigzag" "$imp" "$TESTINDIR/$img0.$s.bmp" ""
     if [ $ret -ne 0 ]; then exit -1; fi
   done
 
