@@ -1,1 +1,4 @@
 */tests/*.bmp
+*/build/*
+*/tests/*
+src/.gdb_history
