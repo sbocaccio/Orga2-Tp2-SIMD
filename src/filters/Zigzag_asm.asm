@@ -165,7 +165,6 @@ Zigzag_asm:
 			add current_pointer_src, 16
 			jmp .rowLoop
 		;======== Caso C ======|| i = 3 (mod 4)
-		.colLoopCasoB:
 		.colLoopCasoC:
 			cmp j, widthMinus2
 			je .endColLoopCasoC
