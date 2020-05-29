@@ -45,6 +45,7 @@ movdqu xmm1,[MascaraConseguirBlue]
 movdqu xmm0,[MascaraConservarPrimerbit]
 movdqu xmm15,[MascaraSacarUltimos2Bits]
 movdqu xmm13,[MascaraInvertir]
+movdqu xmm12,[MascaraConservarPrimer2bit]
 mov r14d, ecx
 sub r14d,5        ;-> Debo continuar por cada fila hasta r14d
 
@@ -166,7 +167,7 @@ BitsColores:
 movdqu xmm11 , [REG_SRC + r10] ;XMM2 tiene el valor de SRC ESPEJO                  
 pshufb xmm11, xmm13 ; Los invierto   00011011
 psrld xmm11,2          ; Los corro dos bits para sacar los 2 y 3 
-pand xmm11, [MascaraConservarPrimer2bit] ; Me quedo con los bits que quiero
+pand xmm11, xmm12 ; Me quedo con los bits que quiero
 
 pxor xmm8,xmm11
 
