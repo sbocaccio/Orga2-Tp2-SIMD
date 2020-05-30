@@ -42,6 +42,7 @@ Zigzag_asm:
 	movdqu xmm10, [unos]
 	movdqu xmm9, [pixeles_blancos]
 	movdqu xmm8, [dos_pixeles_blancos]
+	pxor xmm6, xmm6
 	%define blue_green_mask_ xmm15
 	%define red_alpha_mask_ xmm14
 	%define fourth_pixel_mask_ xmm13
@@ -62,20 +63,13 @@ Zigzag_asm:
 	add current_pointer_dst, rbx
 	mov i, 2
 	mov j, 2
-	.rowLoop:
+	.rowLoopCasoA:
 		cmp i, heightMinus2
-		je .endRowLoop
-		mov ebp, i
-		shl rbp, 62
-		shr rbp, 62
-		cmp rbp, 1
-		je .colLoopCasoB
-		cmp rbp, 3
-		je .colLoopCasoC
+		jge .endRowLoopCasoA
 		;======== Caso A ======|| i = 0 (mod 4) v i = 2 (mod 4)
 		.colLoopCasoA:
 			cmp j, widthMinus2
-			je .endColLoop
+			je .endColLoopCasoA
 			
 			movdqu xmm0, [current_pointer_src - 8]
 			movdqu xmm1, [current_pointer_src]
@@ -140,23 +134,32 @@ Zigzag_asm:
 			add current_pointer_src, 8
 			add j, 2
 			jmp .colLoopCasoA
-		;======== Caso B ======|| i = 1 (mod 4)
-		.colLoopCasoB:
-			cmp j, widthMinus2
-			je .endColLoop
-
-			movdqu xmm0, [current_pointer_src - 8]
-			movdqu [current_pointer_dst], xmm0
-
+		.endColLoopCasoA:
+			mov j, 2
+			add i, 2
 			add current_pointer_dst, 16
+			add current_pointer_dst, row_size
 			add current_pointer_src, 16
-			add j, 4
-			jmp .colLoopCasoB
-			jmp .rowLoop
-		;======== Caso C ======|| i = 3 (mod 4)
+			add current_pointer_src, row_size
+			jmp .rowLoopCasoA
+	.endRowLoopCasoA:
+		mov current_pointer_src, rdi
+		mov current_pointer_dst, rsi
+		lea rbx, [row_size * 2 + 8]
+		add current_pointer_src, rbx
+		add current_pointer_dst, rbx
+		add current_pointer_src, row_size
+		add current_pointer_dst, row_size
+		mov i, 3
+		mov j, 2
+
+	;======== Caso C ======|| i = 3 (mod 4)
+	.rowLoopCasoC:
+		cmp i, heightMinus2
+		jge .endRowLoopCasoC
 		.colLoopCasoC:
 			cmp j, widthMinus2
-			je .endColLoop
+			je .endColLoopCasoC
 
 			movdqu xmm0, [current_pointer_src + 8]
 			movdqu [current_pointer_dst], xmm0
@@ -165,13 +168,57 @@ Zigzag_asm:
 			add current_pointer_src, 16
 			add j, 4
 			jmp .colLoopCasoC
-		.endColLoop:
+		.endColLoopCasoC:
 			mov j, 2
-			inc i
+			add i, 4
+			lea rbx, [row_size * 2]
+			add current_pointer_dst, 16
+			add current_pointer_dst, rbx
+			add current_pointer_dst, row_size
+			add current_pointer_src, 16
+			add current_pointer_src, rbx
+			add current_pointer_src, row_size
+			jmp .rowLoopCasoC
+	.endRowLoopCasoC:
+		mov current_pointer_src, rdi
+		mov current_pointer_dst, rsi
+		lea rbx, [row_size * 4 + 8]
+		add current_pointer_src, rbx
+		add current_pointer_dst, rbx
+		add current_pointer_src, row_size
+		add current_pointer_dst, row_size
+		mov i, 5
+		mov j, 2	
+	;======== Caso B ======|| i = 1 (mod 4)
+	.rowLoopCasoB:
+		cmp i, heightMinus2
+		jg .endRowLoopCasoB
+		.colLoopCasoB:
+			cmp j, widthMinus2
+			je .endColLoopCasoB
+
+			movdqu xmm0, [current_pointer_src - 8]
+			movdqu [current_pointer_dst], xmm0
+			
 			add current_pointer_dst, 16
 			add current_pointer_src, 16
-			jmp .rowLoop
-	.endRowLoop:
+			add j, 4
+			jmp .colLoopCasoB
+		.endColLoopCasoB:
+			mov j, 2
+			add i, 4
+			
+			lea rbx, [row_size * 2]
+			add current_pointer_dst, 16
+			add current_pointer_dst, rbx
+			add current_pointer_dst, row_size
+			add current_pointer_src, 16
+			add current_pointer_src, rbx
+			add current_pointer_src, row_size
+
+			jmp .rowLoopCasoB
+	.endRowLoopCasoB:	
+		
 	;==========
 	add edx, 2
 	add ecx, 2
