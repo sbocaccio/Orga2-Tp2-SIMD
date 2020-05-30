@@ -1,4 +1,3 @@
-ALIGN 16
 MascaraConseguirRojo:       db 0x02,0xFF,0xFF,0xFF,0x06,0xFF,0xFF,0xFF,0x0A,0xFF,0xFF,0xFF,0x0E,0xFF,0xFF,0xFF
 MascaraConseguirGreen:      db 0x01,0xFF,0xFF,0xFF,0x05,0xFF,0xFF,0xFF,0x09,0xFF,0xFF,0xFF,0x0D,0xFF,0xFF,0xFF
 MascaraConseguirBlue:       db 0x00,0xFF,0xFF,0xFF,0x04,0xFF,0xFF,0xFF,0x08,0xFF,0xFF,0xFF,0x0C,0xFF,0xFF,0xFF
@@ -84,25 +83,25 @@ movdqu xmm14,[REG_SRC +rax]
 ; Calculos de color:
 
 ;Green
-movdqa xmm10,xmm4 ; Me hago una copia de los pixeles
+movdqu xmm10,xmm4 ; Me hago una copia de los pixeles
 pshufb xmm4,xmm2
 
-movdqa xmm6,xmm4
+movdqu xmm6,xmm4
 paddw xmm6,xmm6
 
-movdqa xmm4,xmm10 ;Restauro copia
+movdqu xmm4,xmm10 ;Restauro copia
 ;Red
 pshufb xmm4,xmm3
 paddw xmm6,xmm4
-movdqa xmm4,xmm10 ;Restauro copia
+movdqu xmm4,xmm10 ;Restauro copia
 ;Blue
 pshufb xmm4,xmm1
 paddw xmm6,xmm4
-movdqa xmm4,xmm10
+movdqu xmm4,xmm10
 
 ;------- Me quedo en xmm4 el valor de el registro 
 psrld xmm6, 2														
-movdqa xmm10,xmm6 ; Me hago una copia de los colores ;         
+movdqu xmm10,xmm6 ; Me hago una copia de los colores ;         
 ;pshufb xmm6,xmm13 ;-> En este linea la convertirias en blanco y negro poniendo el valor de color en cada componente 
 
 RedBits:
@@ -111,14 +110,14 @@ pand xmm10, xmm0 ; -> consigo  bit 2 de cada dword
 por xmm8,xmm10   ; -> consigo asigno los valores para bit 1 
 pslld xmm8, 1    ; -> los corro al bit 1 de cada dword
 
-movdqa xmm10,xmm6
+movdqu xmm10,xmm6
 
 
 psrld xmm10,5
 pand xmm10, xmm0 ; -> consigo  bit 5 de cada dword
 por xmm8,xmm10 ; ; -> le asigno los valores para bit 0 
 
-movdqa xmm10,xmm6
+movdqu xmm10,xmm6
 
 ;Tengo que alinearlos a la posicion 16 de cada dword
 pslld xmm8,16
@@ -131,13 +130,13 @@ pand xmm10, xmm0 ; -> consigo  bit 3 de cada dword
 por xmm9,xmm10   ; -> consigo asigno los valores para bit 1 
 pslld xmm9, 1    ; -> los corro al bit 1 de cada dword
 
-movdqa xmm10,xmm6 ; Restauro copia 
+movdqu xmm10,xmm6 ; Restauro copia 
 
 psrld xmm10,6  
 pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
 por xmm9,xmm10 ; ; -> le asigno los valores para bit 0 
 
-movdqa xmm10,xmm6; Restauro la copia 
+movdqu xmm10,xmm6; Restauro la copia 
 
 ;Tengo que alinearlos a la posicion 8 de cada dword
 pslld xmm9,8
@@ -148,13 +147,13 @@ pand xmm10, xmm0 ; -> consigo  bit 2 de cada dword
 por xmm7,xmm10   ; -> consigo asigno los valores para bit 1 
 pslld xmm7, 1    ; -> los corro al bit 1 de cada dword
 
-movdqa xmm10,xmm6
+movdqu xmm10,xmm6
 
 psrld xmm10,7
 pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
 por xmm7,xmm10 ; ; -> le asigno los valores para bit 0 
 
-movdqa xmm10,xmm6
+movdqu xmm10,xmm6
 
 ;------- 
 Imagen:                                       
@@ -181,7 +180,7 @@ movdqu [REG_ACOPIAR+rax],xmm14
 
 ;Aumentar i / j 
  
-cmp r11,r12  ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 8  
+cmp r11,r12  ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 5  ()
 je termine  ; 
 add rax,16
 sub r10,16
@@ -191,6 +190,11 @@ jmp ciclo
 
 termine:
 mov rax,rdx
+
+
+
+
+
 
 ;-------
 pop r11

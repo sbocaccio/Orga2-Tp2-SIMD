@@ -55,13 +55,13 @@ movdqa xmm12,[MascaraConservarPrimer2bit]
 mov eax,ecx
 imul eax, r8d
 mov r12,rax
-sub r12,4
+sub r12,32
 
 xor rax,rax
 
 mov eax,r9d
 imul eax, r8d  ;----> Final de la foto a SRC, va disminuyendo a medida que voy procesando pixeles pixeles
-sub eax,16
+sub eax,32
 mov r10d,eax
 
 xor rax,rax
@@ -164,6 +164,120 @@ por xmm8,xmm9
 ;----------------------- Ya tengo los colores de blanco y negro              
 BitsColores:
 ;Pixeles Espejo
+movdqu xmm11 , [REG_SRC + r10 + 16] ;XMM2 tiene el valor de SRC ESPEJO                  
+pshufb xmm11, xmm13 ; Los invierto   00011011
+psrld xmm11,2          ; Los corro dos bits para sacar los 2 y 3 
+pand xmm11, xmm12 ; Me quedo con los bits que quiero
+
+pxor xmm8,xmm11
+
+;En xmm14 tengo la foto Que esconde
+Filtro:
+pand xmm14, xmm15 ; Limpio los 2 ultimos bits y copio
+por xmm14,xmm8                              
+movdqu [REG_ACOPIAR+rax],xmm14
+
+;----------------------------------------------------------------------------------------------------
+									;Siguientes 8 pixeles
+;----------------------------------------------------------------------------------------------------
+pxor xmm5,xmm5 ; Aca guardo la informacion de los pixeles,original
+pxor xmm6,xmm6 ; Aca guardo en el primer byte por dword el color de cada pixel
+pxor xmm7,xmm7 ; RojoBits 
+pxor xmm8,xmm8 ; GreenBits
+pxor xmm9,xmm9 ; AzulBits																			  
+																											
+												 	
+;Consigo el valor de los 4 pixeles              
+												 	
+; Offset de la fila                            					
+												
+;copiamos el dato
+movdqu xmm4, [REG_SRC2+rax + 16]
+movdqu xmm14,[REG_SRC +rax + 16]
+
+; Calculos de color:
+
+;Green
+movdqa xmm10,xmm4 ; Me hago una copia de los pixeles
+pshufb xmm4,xmm2
+
+movdqa xmm6,xmm4
+paddw xmm6,xmm6
+
+movdqa xmm4,xmm10 ;Restauro copia
+;Red
+pshufb xmm4,xmm3
+paddw xmm6,xmm4
+movdqa xmm4,xmm10 ;Restauro copia
+;Blue
+pshufb xmm4,xmm1
+paddw xmm6,xmm4
+movdqa xmm4,xmm10
+
+;------- Me quedo en xmm4 el valor de el registro 
+psrld xmm6, 2														
+movdqa xmm10,xmm6 ; Me hago una copia de los colores ;         
+;pshufb xmm6,xmm13 ;-> En este linea la convertirias en blanco y negro poniendo el valor de color en cada componente 
+
+RedBits2:
+psrld xmm10,2 
+pand xmm10, xmm0 ; -> consigo  bit 2 de cada dword
+por xmm8,xmm10   ; -> consigo asigno los valores para bit 1 
+pslld xmm8, 1    ; -> los corro al bit 1 de cada dword
+
+movdqa xmm10,xmm6
+
+
+psrld xmm10,5
+pand xmm10, xmm0 ; -> consigo  bit 5 de cada dword
+por xmm8,xmm10 ; ; -> le asigno los valores para bit 0 
+
+movdqa xmm10,xmm6
+
+;Tengo que alinearlos a la posicion 16 de cada dword
+pslld xmm8,16
+
+	
+
+GreenBits2:
+psrld xmm10,3 
+pand xmm10, xmm0 ; -> consigo  bit 3 de cada dword
+por xmm9,xmm10   ; -> consigo asigno los valores para bit 1 
+pslld xmm9, 1    ; -> los corro al bit 1 de cada dword
+
+movdqa xmm10,xmm6 ; Restauro copia 
+
+psrld xmm10,6  
+pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
+por xmm9,xmm10 ; ; -> le asigno los valores para bit 0 
+
+movdqa xmm10,xmm6; Restauro la copia 
+
+;Tengo que alinearlos a la posicion 8 de cada dword
+pslld xmm9,8
+
+BlueBits2:
+psrld xmm10,4 
+pand xmm10, xmm0 ; -> consigo  bit 2 de cada dword
+por xmm7,xmm10   ; -> consigo asigno los valores para bit 1 
+pslld xmm7, 1    ; -> los corro al bit 1 de cada dword
+
+movdqa xmm10,xmm6
+
+psrld xmm10,7
+pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
+por xmm7,xmm10 ; ; -> le asigno los valores para bit 0 
+
+movdqa xmm10,xmm6
+
+;------- 
+Imagen2:                                       
+por xmm8,xmm7 ; 							|    47|    36|    25|   0 |    47|    36|    25|   0 |   47|    36|    25|   0 |    47|    36|    25|   0 |
+por xmm8,xmm9
+
+;----------------------- Ya tengo los colores de blanco y negro              
+BitsColores2:
+;Pixeles Espejo
 movdqu xmm11 , [REG_SRC + r10] ;XMM2 tiene el valor de SRC ESPEJO                  
 pshufb xmm11, xmm13 ; Los invierto   00011011
 psrld xmm11,2          ; Los corro dos bits para sacar los 2 y 3 
@@ -173,24 +287,29 @@ pxor xmm8,xmm11
 
 
 ;En xmm14 tengo la foto Que esconde
-Filtro:
+Filtro2:
 pand xmm14, xmm15 ; Limpio los 2 ultimos bits y copio
 por xmm14,xmm8                              
-movdqu [REG_ACOPIAR+rax],xmm14
+movdqu [REG_ACOPIAR+rax + 16],xmm14
 ;Ahora hay que ver si tenemos que seguir ciclando o solo aumentar las variables con las que nos movemos
 
 ;Aumentar i / j 
  
-cmp r11,r12  ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 8  
+cmp r11,r12  ; -> CONTADOR 
 je termine  ; 
-add rax,16
-sub r10,16
-add r11,4
+add rax,32
+sub r10,32
+add r11,8
 jmp ciclo
 
 
 termine:
 mov rax,rdx
+
+
+
+
+
 
 ;-------
 pop r11

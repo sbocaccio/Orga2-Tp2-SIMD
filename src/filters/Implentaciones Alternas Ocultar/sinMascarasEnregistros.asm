@@ -1,4 +1,3 @@
-ALIGN 16
 MascaraConseguirRojo:       db 0x02,0xFF,0xFF,0xFF,0x06,0xFF,0xFF,0xFF,0x0A,0xFF,0xFF,0xFF,0x0E,0xFF,0xFF,0xFF
 MascaraConseguirGreen:      db 0x01,0xFF,0xFF,0xFF,0x05,0xFF,0xFF,0xFF,0x09,0xFF,0xFF,0xFF,0x0D,0xFF,0xFF,0xFF
 MascaraConseguirBlue:       db 0x00,0xFF,0xFF,0xFF,0x04,0xFF,0xFF,0xFF,0x08,0xFF,0xFF,0xFF,0x0C,0xFF,0xFF,0xFF
@@ -85,18 +84,18 @@ movdqu xmm14,[REG_SRC +rax]
 
 ;Green
 movdqa xmm10,xmm4 ; Me hago una copia de los pixeles
-pshufb xmm4,xmm2
+pshufb xmm4,[MascaraConseguirGreen]
 
 movdqa xmm6,xmm4
 paddw xmm6,xmm6
 
 movdqa xmm4,xmm10 ;Restauro copia
 ;Red
-pshufb xmm4,xmm3
+pshufb xmm4,[MascaraConseguirRojo]
 paddw xmm6,xmm4
 movdqa xmm4,xmm10 ;Restauro copia
 ;Blue
-pshufb xmm4,xmm1
+pshufb xmm4,[MascaraConseguirBlue]
 paddw xmm6,xmm4
 movdqa xmm4,xmm10
 
@@ -107,7 +106,7 @@ movdqa xmm10,xmm6 ; Me hago una copia de los colores ;
 
 RedBits:
 psrld xmm10,2 
-pand xmm10, xmm0 ; -> consigo  bit 2 de cada dword
+pand xmm10,[MascaraConservarPrimerbit]
 por xmm8,xmm10   ; -> consigo asigno los valores para bit 1 
 pslld xmm8, 1    ; -> los corro al bit 1 de cada dword
 
@@ -115,7 +114,7 @@ movdqa xmm10,xmm6
 
 
 psrld xmm10,5
-pand xmm10, xmm0 ; -> consigo  bit 5 de cada dword
+pand xmm10,[MascaraConservarPrimerbit] 
 por xmm8,xmm10 ; ; -> le asigno los valores para bit 0 
 
 movdqa xmm10,xmm6
@@ -127,14 +126,14 @@ pslld xmm8,16
 
 GreenBits:
 psrld xmm10,3 
-pand xmm10, xmm0 ; -> consigo  bit 3 de cada dword
+pand xmm10,[MascaraConservarPrimerbit] 
 por xmm9,xmm10   ; -> consigo asigno los valores para bit 1 
 pslld xmm9, 1    ; -> los corro al bit 1 de cada dword
 
 movdqa xmm10,xmm6 ; Restauro copia 
 
 psrld xmm10,6  
-pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
+pand xmm10,[MascaraConservarPrimerbit] 
 por xmm9,xmm10 ; ; -> le asigno los valores para bit 0 
 
 movdqa xmm10,xmm6; Restauro la copia 
@@ -144,14 +143,14 @@ pslld xmm9,8
 
 BlueBits:
 psrld xmm10,4 
-pand xmm10, xmm0 ; -> consigo  bit 2 de cada dword
+pand xmm10,[MascaraConservarPrimerbit] 
 por xmm7,xmm10   ; -> consigo asigno los valores para bit 1 
 pslld xmm7, 1    ; -> los corro al bit 1 de cada dword
 
 movdqa xmm10,xmm6
 
 psrld xmm10,7
-pand xmm10, xmm0 ; -> consigo  bit 6 de cada dword
+pand xmm10,[MascaraConservarPrimerbit] 
 por xmm7,xmm10 ; ; -> le asigno los valores para bit 0 
 
 movdqa xmm10,xmm6
@@ -164,24 +163,24 @@ por xmm8,xmm9
 ;----------------------- Ya tengo los colores de blanco y negro              
 BitsColores:
 ;Pixeles Espejo
-movdqu xmm11 , [REG_SRC + r10] ;XMM2 tiene el valor de SRC ESPEJO                  
-pshufb xmm11, xmm13 ; Los invierto   00011011
+movdqu xmm11 , [REG_SRC + r10] ;XMM11 tiene el valor de SRC ESPEJO                  
+pshufb xmm11, [MascaraInvertir] ; Los invierto   00011011
 psrld xmm11,2          ; Los corro dos bits para sacar los 2 y 3 
-pand xmm11, xmm12 ; Me quedo con los bits que quiero
+pand xmm11, [MascaraConservarPrimer2bit] ; Me quedo con los bits que quiero
 
 pxor xmm8,xmm11
 
 
 ;En xmm14 tengo la foto Que esconde
 Filtro:
-pand xmm14, xmm15 ; Limpio los 2 ultimos bits y copio
+pand xmm14, [MascaraSacarUltimos2Bits] ; Limpio los 2 ultimos bits y copio
 por xmm14,xmm8                              
 movdqu [REG_ACOPIAR+rax],xmm14
 ;Ahora hay que ver si tenemos que seguir ciclando o solo aumentar las variables con las que nos movemos
 
 ;Aumentar i / j 
  
-cmp r11,r12  ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 8  
+cmp r11,r12  ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 5  ()
 je termine  ; 
 add rax,16
 sub r10,16
@@ -191,6 +190,11 @@ jmp ciclo
 
 termine:
 mov rax,rdx
+
+
+
+
+
 
 ;-------
 pop r11
