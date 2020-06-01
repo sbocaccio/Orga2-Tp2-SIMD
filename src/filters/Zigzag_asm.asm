@@ -10,6 +10,7 @@ treinta_y_tres: dw 0x33, 0x33, 0x33, 0x1, 0x33, 0x33, 0x33, 0x1; 0x33 = 51 = 2^8
 unos: db 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff
 pixeles_blancos: db 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF 
 dos_pixeles_blancos: db 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+cincos: dd 5.0, 5.0, 5.0, 1.0 
 section .text
 
 Zigzag_asm:
@@ -42,6 +43,7 @@ Zigzag_asm:
 	movdqu xmm10, [unos]
 	movdqu xmm9, [pixeles_blancos]
 	movdqu xmm8, [dos_pixeles_blancos]
+	movdqu xmm6, [cincos]
 	%define blue_green_mask_ xmm15
 	%define red_alpha_mask_ xmm14
 	%define fourth_pixel_mask_ xmm13
@@ -50,6 +52,7 @@ Zigzag_asm:
 	%define pixeles_blancos_ xmm9
 	%define dos_pixeles_blancos_ xmm8
 	%define unos_ xmm10
+	%define cincos_ xmm6
 	%define current_pointer_src r12
 	%define current_pointer_dst r13
 	%define i r14d
@@ -124,15 +127,26 @@ Zigzag_asm:
 			pshufb xmm4, first_pixel_mask_; ||A|R|G|B||
 
 			paddusw xmm3, xmm4; ||A|R|G|B|| A XMM3
+
+			pxor xmm7, xmm7
+			punpcklwd xmm3, xmm7
+			cvtdq2ps xmm7, xmm3 
+			divps xmm7, cincos_
+			cvtps2dq xmm3, xmm7
+			packssdw xmm3, xmm3
 			pslldq xmm3, 8
 
+			pxor xmm7, xmm7
+			punpcklwd xmm2, xmm7
+			cvtdq2ps xmm7, xmm2 
+			divps xmm7, cincos_
+			cvtps2dq xmm2, xmm7
+			packssdw xmm2, xmm2
+			pslldq xmm3, 8
+			psrldq xmm3, 8
 			por xmm2, xmm3
-
-			pmullw xmm2, treinta_y_tres_
-			psrlw xmm2, 8 
 			packuswb xmm2, xmm2
 			por xmm2, unos_
-
 			movq [current_pointer_dst], xmm2
 
 			;=========
@@ -152,7 +166,6 @@ Zigzag_asm:
 			add current_pointer_src, 16
 			add j, 4
 			jmp .colLoopCasoB
-			jmp .rowLoop
 		;======== Caso C ======|| i = 3 (mod 4)
 		.colLoopCasoC:
 			cmp j, widthMinus2
