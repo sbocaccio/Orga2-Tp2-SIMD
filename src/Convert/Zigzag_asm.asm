@@ -52,7 +52,7 @@ Zigzag_asm:
 	%define pixeles_blancos_ xmm9
 	%define dos_pixeles_blancos_ xmm8
 	%define unos_ xmm10
-	%define cincos_, xmm6
+	%define cincos_ xmm6
 	%define current_pointer_src r12
 	%define current_pointer_dst r13
 	%define i r14d

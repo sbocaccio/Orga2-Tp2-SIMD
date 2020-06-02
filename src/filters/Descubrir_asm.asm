@@ -2,22 +2,22 @@ section .rodata
 
 align 16
 
-mascaraMirror: times 4 db 0x0C,0x0C,0x0C,0x00
-mascaraSrc: times 4 db 0x03,0x03,0x03,0x00
+mirrorMask: times 4 db 0x0C,0x0C,0x0C,0x00
+srcMask: times 4 db 0x03,0x03,0x03,0x00
 
-mascaraEscalaDeGrises: times 4 db 0x01,0x00,0x00,0x00
-mascaraTransparencia: times 4 db 0x00,0x00,0x00,0xFF
+grayMask: times 4 db 0x01,0x00,0x00,0x00
+alphaMask: times 4 db 0x00,0x00,0x00,0xFF
 
 shuffleFinal: db 0x00,0x00,0x00,0x00,0x04,0x04,0x04,0x04,0x08,0x08,0x08,0x08,0x0C,0x0C,0x0C,0x0C
 
 section .text
 
 global Descubrir_asm
-
-	;rdi -> src
-	;rsi -> dst
-	;edx -> width
-	;ecx -> height
+	;Aridad:
+	;rdi: src
+	;rsi: dst
+	;edx: width
+	;ecx: height
 
 Descubrir_asm:
 
@@ -40,80 +40,73 @@ Descubrir_asm:
 	add r9, r8
 	sub r9, 16		;puntero para recorrer al reves
 
-.ciclo:
+.mainLoop:
 	
 	movdqu xmm8, [rdi]	;src
 	movdqu xmm9, [r9]	;mirror
 
-	movdqa xmm10, [mascaraSrc]
-	pand xmm8, xmm10				;bits 0 y 1 de cada componente
+	movdqa xmm10, [srcMask]
+	pand xmm8, xmm10				
 
 	movdqu xmm11, xmm9
-	pshufd xmm9, xmm11, 00011011b		;pixels al reves
+	pshufd xmm9, xmm11, 00011011b		
 
-	movdqa xmm10, [mascaraMirror]
-	pand xmm9, xmm10				;bits 2 y 3 de cada componente
+	movdqa xmm10, [mirrorMask]
+	pand xmm9, xmm10				
+	psrlw xmm9, 2					
 
-	psrlw xmm9, 2					;bits 2 y 3 de cada componente ubicados en 0 y 1
-
-	pxor xmm8, xmm9					; xmm8 = |...|x x x x x x e2 e5|x x x x x x e3 e6|x x x x x x e4 e7|
-									; e7e6e5e4e3e2e1e0 es el byte de escala de grises
+	pxor xmm8, xmm9					
+									
 	pxor xmm0, xmm0
 
-	movdqa xmm10, [mascaraEscalaDeGrises]
+	movdqa xmm10, [grayMask]
 
 	;bit e7
 	movdqu xmm11, xmm10
-	pand xmm11, xmm8				;bit e7 en posicion 0
+	pand xmm11, xmm8				
 	pslld xmm11, 7
-	por xmm0, xmm11					;bit e7 en posicion 7 en cada pixel
+	por xmm0, xmm11					
 
 	;bit e4
 	movdqu xmm11, xmm10
-	pslld xmm11, 1					;ubico mascara
-	pand xmm11, xmm8				;bit e4 en posicion 1
+	pslld xmm11, 1					
+	pand xmm11, xmm8				
 	pslld xmm11, 3
-	por xmm0, xmm11					;bit e4 en poscion 4 en cada pixel
+	por xmm0, xmm11					
 
 	;bit e6
 	movdqu xmm11, xmm10
-	pslld xmm11, 8					;ubico mascara
-	pand xmm11, xmm8				;bit e6 en posicion 8
+	pslld xmm11, 8					
+	pand xmm11, xmm8				
 	psrld xmm11, 2
-	por xmm0, xmm11					;bit e6 en poscion 6 en cada pixel
+	por xmm0, xmm11					
 
 	;bit e3
 	movdqu xmm11, xmm10
-	pslld xmm11, 9					;ubico mascara
-	pand xmm11, xmm8				;bit e3 en posicion 9
+	pslld xmm11, 9					
+	pand xmm11, xmm8				
 	psrld xmm11, 6
-	por xmm0, xmm11					;bit e3 en poscion 3 en cada pixel
+	por xmm0, xmm11					
 
 	;bit e5
 	movdqu xmm11, xmm10
-	pslld xmm11, 16					;ubico mascara
-	pand xmm11, xmm8				;bit e5 en posicion 16
+	pslld xmm11, 16					
+	pand xmm11, xmm8				
 	psrld xmm11, 11
-	por xmm0, xmm11					;bit e5 en poscion 5 en cada pixel
+	por xmm0, xmm11					
 
 	;bit e2
 	movdqu xmm11, xmm10
-	pslld xmm11, 17					;ubico mascara
-	pand xmm11, xmm8				;bit e2 en posicion 17
+	pslld xmm11, 17					
+	pand xmm11, xmm8				
 	psrld xmm11, 15
-	por xmm0, xmm11					;bit e2 en poscion 2 en cada pixel
-
-	;xmm0 = |x|x|x|gris3|x|x|x|gris2|x|x|x|gris1|x|x|x|gris0|
+	por xmm0, xmm11					
 
 	movdqa xmm11, [shuffleFinal]
 	pshufb xmm0, xmm11
 
-	;xmm0 = |x|gris3|gris3|gris3|x|gris2|gris2|gris2|x|gris1|gris1|gris1|x|gris0|gris0|gris0|
-
-	movdqa xmm11, [mascaraTransparencia]
+	movdqa xmm11, [alphaMask]
 	por xmm0, xmm11
-
-	;xmm0 = |255|gris3|gris3|gris3|255|gris2|gris2|gris2|255|gris1|gris1|gris1|255|gris0|gris0|gris0|
 
 	movdqu [rsi], xmm0
 	add rdi, 16
@@ -121,7 +114,7 @@ Descubrir_asm:
 	sub r9, 16
 	dec rcx
 	test rcx, rcx
-	jnz .ciclo
+	jnz .mainLoop
 
 	pop rbp
 	ret

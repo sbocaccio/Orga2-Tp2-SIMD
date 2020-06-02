@@ -34,19 +34,9 @@ Zigzag_asm:
 	xor r15, r15
 	sub edx, 2
 	sub ecx, 2
-	movdqu xmm15, [blue_green_mask]
-	movdqu xmm14, [red_alpha_mask]
-	movdqu xmm13, [fourth_pixel_mask]
-	movdqu xmm12, [first_pixel_mask]
-	movdqu xmm11, [treinta_y_tres]
 	movdqu xmm10, [unos]
 	movdqu xmm9, [pixeles_blancos]
 	movdqu xmm8, [dos_pixeles_blancos]
-	%define blue_green_mask_ xmm15
-	%define red_alpha_mask_ xmm14
-	%define fourth_pixel_mask_ xmm13
-	%define first_pixel_mask_ xmm12
-	%define treinta_y_tres_ xmm11
 	%define pixeles_blancos_ xmm9
 	%define dos_pixeles_blancos_ xmm8
 	%define unos_ xmm10
@@ -81,14 +71,14 @@ Zigzag_asm:
 			movdqu xmm1, [current_pointer_src]
 
 			movdqu xmm2, xmm0
-			pshufb xmm2, blue_green_mask_; ||0g_3|0g_2|0g_1|0g_0||0b_3|0b_2|0b_1|0b_0||
+			pshufb xmm2, [blue_green_mask]; ||0g_3|0g_2|0g_1|0g_0||0b_3|0b_2|0b_1|0b_0||
 			phaddsw xmm2, xmm2
 			phaddsw xmm2, xmm2
 			pslldq xmm2, 12
 			psrldq xmm2, 12; ||--||--|G|B||
 
 			movdqu xmm3, xmm0
-			pshufb xmm3, red_alpha_mask_
+			pshufb xmm3, [red_alpha_mask]
 			phaddsw xmm3, xmm3
 			phaddsw xmm3, xmm3; ||-------|R||
 			pslldq xmm3, 12
@@ -97,7 +87,7 @@ Zigzag_asm:
 			por xmm2, xmm3; ||---------|A|R|G|B||
 
 			movdqu xmm3, xmm1
-			pshufb xmm3, fourth_pixel_mask_; ||A|R|G|B||
+			pshufb xmm3, [fourth_pixel_mask]; ||A|R|G|B||
 
 			paddusw xmm2, xmm3; ||A|R|G|B|| A XMM2
 			pslldq xmm2, 8
@@ -105,14 +95,14 @@ Zigzag_asm:
 
 			;=========
 			movdqu xmm3, xmm1
-			pshufb xmm3, blue_green_mask_; ||0g_3|0g_2|0g_1|0g_0||0b_3|0b_2|0b_1|0b_0||
+			pshufb xmm3, [blue_green_mask]; ||0g_3|0g_2|0g_1|0g_0||0b_3|0b_2|0b_1|0b_0||
 			phaddsw xmm3, xmm3
 			phaddsw xmm3, xmm3
 			pslldq xmm3, 12
 			psrldq xmm3, 12; ||--||--|G|B||
 
 			movdqu xmm4, xmm1
-			pshufb xmm4, red_alpha_mask_
+			pshufb xmm4, [red_alpha_mask]
 			phaddsw xmm4, xmm4
 			phaddsw xmm4, xmm4; ||-------|R||
 			pslldq xmm4, 12
@@ -121,14 +111,14 @@ Zigzag_asm:
 			por xmm3, xmm4; ||---------|A|R|G|B||
 
 			movdqu xmm4, xmm0
-			pshufb xmm4, first_pixel_mask_; ||A|R|G|B||
+			pshufb xmm4, [first_pixel_mask]; ||A|R|G|B||
 
 			paddusw xmm3, xmm4; ||A|R|G|B|| A XMM3
 			pslldq xmm3, 8
 
 			por xmm2, xmm3
 
-			pmullw xmm2, treinta_y_tres_
+			pmullw xmm2, [treinta_y_tres]
 			psrlw xmm2, 8 
 			packuswb xmm2, xmm2
 			por xmm2, unos_

@@ -77,9 +77,6 @@ Zigzag_asm:
 			je .casoC
 			;======== Caso A ======|| i = 0 (mod 4) v i = 2 (mod 4)
 			.casoA:
-				cmp j, widthMinus2
-				je .endColLoop
-				
 				movdqu xmm0, [current_pointer_src - 8]
 				movdqu xmm1, [current_pointer_src]
 
@@ -138,12 +135,12 @@ Zigzag_asm:
 
 				movq [current_pointer_dst], xmm2
 
-				jmp continue
+				jmp .continue
 			;======== Caso B ======|| i = 1 (mod 4)
 			.casoB:
 				movdqu xmm0, [current_pointer_src - 8]
 				movdqu [current_pointer_dst], xmm0
-				jmp continue
+				jmp .continue
 			;======== Caso C ======|| i = 3 (mod 4)
 			.casoC:
 				movdqu xmm0, [current_pointer_src + 8]
@@ -161,8 +158,8 @@ Zigzag_asm:
 			lea rbx, [row_size * 2]
 			add current_pointer_src, rbx
 			add current_pointer_dst, rbx
-			lea current_pointer_src, [j * 4]
-			lea current_pointer_dst, [j * 4]
+			lea current_pointer_src, [current_pointer_src + r15 * 4]
+			lea current_pointer_dst, [current_pointer_dst + r15 * 4]
 			jmp .colLoop
 	;==========
 	.paintBorders:
