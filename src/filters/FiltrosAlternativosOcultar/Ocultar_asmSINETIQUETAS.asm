@@ -164,11 +164,14 @@ movdqu [REG_ACOPIAR+rax],xmm14
 
 ;Aumentar i / j 
  
-	cmp r13, r15 ; -> CONTADOR DE COLUMNAS MENOR A EL NUMERO DE COLUMNAS - 5  ()
-	je termine  ; 
+	
 	add rax,16
 	sub r10,16
 	add r13,4
+	
+	cmp r13, r15 
+	je termine  ; 
+	
 	jmp ciclo
 
 	termine:
