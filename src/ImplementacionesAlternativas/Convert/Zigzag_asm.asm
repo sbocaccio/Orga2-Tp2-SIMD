@@ -13,6 +13,8 @@ unos: db 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0xff
 ALIGN 16
 pixeles_blancos: db 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF 
 dos_pixeles_blancos: db 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+ALIGN 16
+cincos: dd 5.0, 5.0, 5.0, 1.0 
 section .text
 
 Zigzag_asm:
@@ -45,6 +47,7 @@ Zigzag_asm:
 	movdqa xmm10, [unos]
 	movdqa xmm9, [pixeles_blancos]
 	movdqa xmm8, [dos_pixeles_blancos]
+	movdqa xmm6, [cincos]
 	%define blue_green_mask_ xmm15
 	%define red_alpha_mask_ xmm14
 	%define fourth_pixel_mask_ xmm13
@@ -53,6 +56,7 @@ Zigzag_asm:
 	%define pixeles_blancos_ xmm9
 	%define dos_pixeles_blancos_ xmm8
 	%define unos_ xmm10
+	%define cincos_ xmm6
 	%define current_pointer_src r12
 	%define current_pointer_dst r13
 	%define i r14d
@@ -80,67 +84,75 @@ Zigzag_asm:
 			cmp j, widthMinus2
 			je .endColLoop
 			
-			;Proceso de a 2 pixeles para el caso A
-
 			movdqu xmm0, [current_pointer_src - 8]
 			movdqu xmm1, [current_pointer_src]
 
-			;Primer pixel procesado
 			movdqu xmm2, xmm0
-			pshufb xmm2, blue_green_mask_; ||0g_1|0g_0|0g_-1|0g_-2||0b_1|0b_0|0b_-1|0b_-2||
+			pshufb xmm2, blue_green_mask_
 			phaddsw xmm2, xmm2
 			phaddsw xmm2, xmm2
 			pslldq xmm2, 12
-			psrldq xmm2, 12; ||--||--|G|B|| G y B ocupan 1 word
+			psrldq xmm2, 12
 
 			movdqu xmm3, xmm0
-			pshufb xmm3, red_alpha_mask_; ||--||0r_1|0r_0|0r_-1|0r_-2||
+			pshufb xmm3, red_alpha_mask_
 			phaddsw xmm3, xmm3
-			phaddsw xmm3, xmm3; ||-------|R|| R ocupa 1 word
+			phaddsw xmm3, xmm3
 			pslldq xmm3, 12
 			psrldq xmm3, 8
 
-			por xmm2, xmm3; ||---------|R|G|B|| R, G y B ocupan 1 word c/u, y tienen la sumatoria de las componentes -2, -1, 0 y 1. Falta la componente 2. 
+			por xmm2, xmm3
 
 			movdqu xmm3, xmm1
-			pshufb xmm3, fourth_pixel_mask_; ||----|R|G|B|| R, G y B ocupan un word c/u, y tienen las componentes del pixel que faltaba (el 2) 
-			paddusw xmm2, xmm3; ||----|R|G|B|| A XMM2
+			pshufb xmm3, fourth_pixel_mask_
+
+			paddusw xmm2, xmm3
 			pslldq xmm2, 8
 			psrldq xmm2, 8
 
 			;=========
-			;Segundo pixel procesado
 			movdqu xmm3, xmm1
-			pshufb xmm3, blue_green_mask_; ||0g_3|0g_2|0g_1|0g_0||0b_3|0b_2|0b_1|0b_0||
+			pshufb xmm3, blue_green_mask_
 			phaddsw xmm3, xmm3
 			phaddsw xmm3, xmm3
 			pslldq xmm3, 12
-			psrldq xmm3, 12; ||--||--|G|B|| G y B ocupan 1 word
+			psrldq xmm3, 12
 
 			movdqu xmm4, xmm1
-			pshufb xmm4, red_alpha_mask_;||--||0r_3|0r_2|0r_1|0r_0||
+			pshufb xmm4, red_alpha_mask_
 			phaddsw xmm4, xmm4
-			phaddsw xmm4, xmm4; ||-------|R|| R ocupa 1 word
+			phaddsw xmm4, xmm4
 			pslldq xmm4, 12
 			psrldq xmm4, 8
 
-			por xmm3, xmm4; ||---------|R|G|B|| R, G y B ocupan 1 word c/u, y tienen la sumatoria de las componentes 0, 1, 2 y 3. Falta la componente -1.
+			por xmm3, xmm4
 
 			movdqu xmm4, xmm0
-			pshufb xmm4, first_pixel_mask_; ||---|R|G|B|| R, G y B ocupan un word c/u, y tienen las componentes del pixel que faltaba (el -1) 
+			pshufb xmm4, first_pixel_mask_
 
-			paddusw xmm3, xmm4; ||---|R|G|B|| A XMM3
+			paddusw xmm3, xmm4
+
+			pxor xmm7, xmm7
+			punpcklwd xmm3, xmm7
+			cvtdq2ps xmm7, xmm3 
+			divps xmm7, cincos_
+			cvtps2dq xmm3, xmm7
+			packusdw xmm3, xmm3
 			pslldq xmm3, 8
 
-			por xmm2, xmm3; xmm2: ||--|R|G|B|--|R|G|B|| En la parte menos significativa estan las componentes en tamaño word del primer pixeles_blancos
-														; y en la mas significativa la analoga para el segundo pixel procesado.
+			pxor xmm7, xmm7
+			punpcklwd xmm2, xmm7
+			cvtdq2ps xmm7, xmm2 
+			divps xmm7, cincos_
+			cvtps2dq xmm2, xmm7
+			packusdw xmm2, xmm2
+			pslldq xmm2, 8
+			psrldq xmm2, 8
 
-			pmullw xmm2, treinta_y_tres_;Ver explicacion en informe. Dividimos mediante multiplicacion + shift
-			psrlw xmm2, 8 				
-			packuswb xmm2, xmm2; Transformo las componentes a byte nuevamente
-			por xmm2, unos_; Restauro alpha
-
-			movq [current_pointer_dst], xmm2; Muevo los dos pixeles procesados a la imagen destino
+			por xmm2, xmm3
+			packuswb xmm2, xmm2
+			por xmm2, unos_
+			movq [current_pointer_dst], xmm2
 
 			;=========
 			add current_pointer_dst, 8

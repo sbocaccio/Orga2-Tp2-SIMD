@@ -45,6 +45,7 @@ Zigzag_asm:
 	movdqa xmm10, [unos]
 	movdqa xmm9, [pixeles_blancos]
 	movdqa xmm8, [dos_pixeles_blancos]
+	pxor xmm6, xmm6
 	%define blue_green_mask_ xmm15
 	%define red_alpha_mask_ xmm14
 	%define fourth_pixel_mask_ xmm13
@@ -65,104 +66,103 @@ Zigzag_asm:
 	add current_pointer_dst, rbx
 	mov i, 2
 	mov j, 2
-	.rowLoop:
+	.rowLoopCasoA:
 		cmp i, heightMinus2
-		je .endRowLoop
-		mov ebp, i
-		shl rbp, 62
-		shr rbp, 62
-		cmp rbp, 1
-		je .colLoopCasoB
-		cmp rbp, 3
-		je .colLoopCasoC
+		jge .endRowLoopCasoA
 		;======== Caso A ======|| i = 0 (mod 4) v i = 2 (mod 4)
 		.colLoopCasoA:
 			cmp j, widthMinus2
-			je .endColLoop
+			je .endColLoopCasoA
 			
-			;Proceso de a 2 pixeles para el caso A
-
 			movdqu xmm0, [current_pointer_src - 8]
 			movdqu xmm1, [current_pointer_src]
 
-			;Primer pixel procesado
 			movdqu xmm2, xmm0
-			pshufb xmm2, blue_green_mask_; ||0g_1|0g_0|0g_-1|0g_-2||0b_1|0b_0|0b_-1|0b_-2||
+			pshufb xmm2, blue_green_mask_
 			phaddsw xmm2, xmm2
 			phaddsw xmm2, xmm2
 			pslldq xmm2, 12
-			psrldq xmm2, 12; ||--||--|G|B|| G y B ocupan 1 word
+			psrldq xmm2, 12
 
 			movdqu xmm3, xmm0
-			pshufb xmm3, red_alpha_mask_; ||--||0r_1|0r_0|0r_-1|0r_-2||
+			pshufb xmm3, red_alpha_mask_
 			phaddsw xmm3, xmm3
-			phaddsw xmm3, xmm3; ||-------|R|| R ocupa 1 word
+			phaddsw xmm3, xmm3
 			pslldq xmm3, 12
 			psrldq xmm3, 8
 
-			por xmm2, xmm3; ||---------|R|G|B|| R, G y B ocupan 1 word c/u, y tienen la sumatoria de las componentes -2, -1, 0 y 1. Falta la componente 2. 
+			por xmm2, xmm3
 
 			movdqu xmm3, xmm1
-			pshufb xmm3, fourth_pixel_mask_; ||----|R|G|B|| R, G y B ocupan un word c/u, y tienen las componentes del pixel que faltaba (el 2) 
-			paddusw xmm2, xmm3; ||----|R|G|B|| A XMM2
+			pshufb xmm3, fourth_pixel_mask_
+
+			paddusw xmm2, xmm3
 			pslldq xmm2, 8
 			psrldq xmm2, 8
 
 			;=========
-			;Segundo pixel procesado
 			movdqu xmm3, xmm1
-			pshufb xmm3, blue_green_mask_; ||0g_3|0g_2|0g_1|0g_0||0b_3|0b_2|0b_1|0b_0||
+			pshufb xmm3, blue_green_mask_
 			phaddsw xmm3, xmm3
 			phaddsw xmm3, xmm3
 			pslldq xmm3, 12
-			psrldq xmm3, 12; ||--||--|G|B|| G y B ocupan 1 word
+			psrldq xmm3, 12
 
 			movdqu xmm4, xmm1
-			pshufb xmm4, red_alpha_mask_;||--||0r_3|0r_2|0r_1|0r_0||
+			pshufb xmm4, red_alpha_mask_
 			phaddsw xmm4, xmm4
-			phaddsw xmm4, xmm4; ||-------|R|| R ocupa 1 word
+			phaddsw xmm4, xmm4
 			pslldq xmm4, 12
 			psrldq xmm4, 8
 
-			por xmm3, xmm4; ||---------|R|G|B|| R, G y B ocupan 1 word c/u, y tienen la sumatoria de las componentes 0, 1, 2 y 3. Falta la componente -1.
+			por xmm3, xmm4
 
 			movdqu xmm4, xmm0
-			pshufb xmm4, first_pixel_mask_; ||---|R|G|B|| R, G y B ocupan un word c/u, y tienen las componentes del pixel que faltaba (el -1) 
+			pshufb xmm4, first_pixel_mask_
 
-			paddusw xmm3, xmm4; ||---|R|G|B|| A XMM3
+			paddusw xmm3, xmm4
 			pslldq xmm3, 8
 
-			por xmm2, xmm3; xmm2: ||--|R|G|B|--|R|G|B|| En la parte menos significativa estan las componentes en tamaño word del primer pixeles_blancos
-														; y en la mas significativa la analoga para el segundo pixel procesado.
+			por xmm2, xmm3
 
-			pmullw xmm2, treinta_y_tres_;Ver explicacion en informe. Dividimos mediante multiplicacion + shift
-			psrlw xmm2, 8 				
-			packuswb xmm2, xmm2; Transformo las componentes a byte nuevamente
-			por xmm2, unos_; Restauro alpha
+			pmullw xmm2, treinta_y_tres_
+			psrlw xmm2, 8 
+			packuswb xmm2, xmm2
+			por xmm2, unos_
 
-			movq [current_pointer_dst], xmm2; Muevo los dos pixeles procesados a la imagen destino
+			movq [current_pointer_dst], xmm2
 
 			;=========
 			add current_pointer_dst, 8
 			add current_pointer_src, 8
 			add j, 2
 			jmp .colLoopCasoA
-		;======== Caso B ======|| i = 1 (mod 4)
-		.colLoopCasoB:
-			cmp j, widthMinus2
-			je .endColLoop
-
-			movdqu xmm0, [current_pointer_src - 8]
-			movdqu [current_pointer_dst], xmm0
-
+		.endColLoopCasoA:
+			mov j, 2
+			add i, 2
 			add current_pointer_dst, 16
+			add current_pointer_dst, row_size
 			add current_pointer_src, 16
-			add j, 4
-			jmp .colLoopCasoB
-		;======== Caso C ======|| i = 3 (mod 4)
+			add current_pointer_src, row_size
+			jmp .rowLoopCasoA
+	.endRowLoopCasoA:
+		mov current_pointer_src, rdi
+		mov current_pointer_dst, rsi
+		lea rbx, [row_size * 2 + 8]
+		add current_pointer_src, rbx
+		add current_pointer_dst, rbx
+		add current_pointer_src, row_size
+		add current_pointer_dst, row_size
+		mov i, 3
+		mov j, 2
+
+	;======== Caso C ======|| i = 3 (mod 4)
+	.rowLoopCasoC:
+		cmp i, heightMinus2
+		jge .endRowLoopCasoC
 		.colLoopCasoC:
 			cmp j, widthMinus2
-			je .endColLoop
+			je .endColLoopCasoC
 
 			movdqu xmm0, [current_pointer_src + 8]
 			movdqu [current_pointer_dst], xmm0
@@ -171,13 +171,57 @@ Zigzag_asm:
 			add current_pointer_src, 16
 			add j, 4
 			jmp .colLoopCasoC
-		.endColLoop:
+		.endColLoopCasoC:
 			mov j, 2
-			inc i
+			add i, 4
+			lea rbx, [row_size * 2]
+			add current_pointer_dst, 16
+			add current_pointer_dst, rbx
+			add current_pointer_dst, row_size
+			add current_pointer_src, 16
+			add current_pointer_src, rbx
+			add current_pointer_src, row_size
+			jmp .rowLoopCasoC
+	.endRowLoopCasoC:
+		mov current_pointer_src, rdi
+		mov current_pointer_dst, rsi
+		lea rbx, [row_size * 4 + 8]
+		add current_pointer_src, rbx
+		add current_pointer_dst, rbx
+		add current_pointer_src, row_size
+		add current_pointer_dst, row_size
+		mov i, 5
+		mov j, 2	
+	;======== Caso B ======|| i = 1 (mod 4)
+	.rowLoopCasoB:
+		cmp i, heightMinus2
+		jg .endRowLoopCasoB
+		.colLoopCasoB:
+			cmp j, widthMinus2
+			je .endColLoopCasoB
+
+			movdqu xmm0, [current_pointer_src - 8]
+			movdqu [current_pointer_dst], xmm0
+			
 			add current_pointer_dst, 16
 			add current_pointer_src, 16
-			jmp .rowLoop
-	.endRowLoop:
+			add j, 4
+			jmp .colLoopCasoB
+		.endColLoopCasoB:
+			mov j, 2
+			add i, 4
+			
+			lea rbx, [row_size * 2]
+			add current_pointer_dst, 16
+			add current_pointer_dst, rbx
+			add current_pointer_dst, row_size
+			add current_pointer_src, 16
+			add current_pointer_src, rbx
+			add current_pointer_src, row_size
+
+			jmp .rowLoopCasoB
+	.endRowLoopCasoB:	
+		
 	;==========
 	add edx, 2
 	add ecx, 2
